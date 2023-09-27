@@ -12,7 +12,6 @@ BUSYBOX_VERSION=1_33_1
 FINDER_APP_DIR=$(realpath $(dirname $0))
 ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
-SYSROOT=$(${CROSS_COMPILE}gcc -print-sysroot)
 
 if [ $# -lt 1 ]
 then
@@ -45,6 +44,7 @@ if [ ! -e ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image ]; then
 fi
 
 echo "Adding the Image in outdir"
+cp ${OUTDIR}/linux-stable/arch/${ARCH}/boot/Image /tmp/aesd-autograder/Image
 
 echo "Creating the staging directory for the root filesystem"
 cd "$OUTDIR"
@@ -55,11 +55,10 @@ then
 fi
 
 # TODO: Create necessary base directories
-mkdir -p $OUTDIR/rootfs
-cd $OUTDIR/rootfs
-mkdir -p bin dev ect home lib lib64 proc sbin sys tmp usr var
-mkdir -p usr/bin usr/lib usr/sbin
-mkdir -p var/log
+mkdir ${OUTDIR}/rootfs
+mkdir ${OUTDIR}/rootfs/{bin,dev,etc,home,lib,lib64,proc,sbin,sys,tmp,usr,var}
+mkdir ${OUTDIR}/rootfs/usr/{bin,lib,sbin}
+mkdir ${OUTDIR}/rootfs/var/log
 
 cd "$OUTDIR"
 if [ ! -d "${OUTDIR}/busybox" ]
@@ -83,14 +82,9 @@ ${CROSS_COMPILE}readelf -a bin/busybox | grep "program interpreter"
 ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
 
 # TODO: Add library dependencies to rootfs
-cp -a ${SYSROOT}/lib/ld-linux-aarch64.so.1 ${OUTDIR}/rootfs/lib
-cp -a ${SYSROOT}/lib64/ld-2.31.so ${OUTDIR}/rootfs/lib64
-cp -a ${SYSROOT}/lib64/libm.so.6 ${OUTDIR}/rootfs/lib64
-cp -a ${SYSROOT}/lib64/libm-2.31.so ${OUTDIR}/rootfs/lib64
-cp -a ${SYSROOT}/lib64/libresolv.so.2 ${OUTDIR}/rootfs/lib64
-cp -a ${SYSROOT}/lib64/libresolv-2.31.so ${OUTDIR}/rootfs/lib64
-cp -a ${SYSROOT}/lib64/libc.so.6 ${OUTDIR}/rootfs/lib64
-cp -a ${SYSROOT}/lib64/libc-2.31.so ${OUTDIR}/rootfs/lib64
+cp $(${CROSS_COMPILE}gcc --print-sysroot)/lib64/* $OUTDIR/rootfs/lib64
+cp $(${CROSS_COMPILE}gcc --print-sysroot)/lib64/* $OUTDIR/rootfs/lib
+cp $(${CROSS_COMPILE}gcc --print-sysroot)/lib/* $OUTDIR/rootfs/lib
 
 # TODO: Make device nodes
 sudo mknode -m 666 ${outdir}rootfs/dev/null c 1 3
